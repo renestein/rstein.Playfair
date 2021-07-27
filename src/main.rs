@@ -1,4 +1,5 @@
 mod globalconstants;
+mod maintest;
 mod operationtype;
 mod playfairconfiguration;
 
@@ -9,7 +10,6 @@ use std::collections;
 use std::io;
 
 fn main() {
-    
     let mut config = PlayfairConfiguration::new();
     println!("{}", config);
 
@@ -63,7 +63,7 @@ fn main() {
     let read_result = io::stdin().read_line(&mut raw_input_text);
     match read_result {
         Ok(_) => {
-            raw_input_text = raw_input_text.to_uppercase();        
+            raw_input_text = raw_input_text.to_uppercase();
         }
 
         Err(error) => panic!("Unexpected error while reading input data {}.", error),
@@ -75,8 +75,7 @@ fn main() {
     println!("{}", output_text);
 }
 
-fn encrypt_decrypt(raw_input_text: &str, config: &PlayfairConfiguration) -> String {
-
+pub fn encrypt_decrypt(raw_input_text: &str, config: &PlayfairConfiguration) -> String {
     let (key_table, ascii_table) = generate_key_table(config);
     let input_text = prepare_input_text(raw_input_text, &ascii_table, config);
     let mut output_text = String::with_capacity(input_text.len());
@@ -152,11 +151,11 @@ fn encrypt_decrypt(raw_input_text: &str, config: &PlayfairConfiguration) -> Stri
 fn prepare_input_text(
     raw_input_text: &str,
     ascii_table: &[char],
-    config: &PlayfairConfiguration) -> String {
-
+    config: &PlayfairConfiguration,
+) -> String {
     let mut output_text = String::with_capacity(raw_input_text.len() + 1);
     let mut first_char = config.unused_char;
-    for elem in raw_input_text.chars() {
+    for elem in raw_input_text.to_uppercase().chars() {
         if !ascii_table.contains(&elem) && elem != config.unused_char {
             continue;
         }
@@ -197,7 +196,6 @@ fn prepare_input_text(
 }
 
 fn generate_key_table(config: &PlayfairConfiguration) -> (Vec<Vec<char>>, Vec<char>) {
-
     let mut ascii_table = get_ascii_table();
     ascii_table.retain(|c| *c != config.unused_char);
     print_char_table(&ascii_table);
@@ -249,7 +247,6 @@ fn generate_key_table(config: &PlayfairConfiguration) -> (Vec<Vec<char>>, Vec<ch
     }
 
     (key_table, ascii_table)
-    
 }
 
 fn get_ascii_table() -> Vec<char> {
