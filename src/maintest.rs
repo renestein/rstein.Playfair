@@ -45,7 +45,7 @@ mod test {
 
         assert_eq!(expected_cipher_text, cipher_text);
     }
-    
+
     #[test]
     fn when_decrypt_data_then_retuns_expected_plain_text() {
         let key = "DEF".to_string();

@@ -31,13 +31,15 @@ impl PlayfairConfiguration {
 
 impl Display for PlayfairConfiguration {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
-        write!(f, "(unused_char='{}', replace_char_for_unused_char='{}', surrogate_char='{}', key='{}', operation_type='{:?}')", 
-                    self.unused_char, 
-                    self.replace_char_for_unused_char,
-                    self.surrogate_char,
-                    self.key,
-                    self.operation_type
-                )
-            
-            }
-        }
+        write!(
+            f,
+            "(unused_char='{}', replace_char_for_unused_char='{}', 
+                    surrogate_char='{}', key='{}', operation_type='{:?}')",
+            self.unused_char,
+            self.replace_char_for_unused_char,
+            self.surrogate_char,
+            self.key,
+            self.operation_type
+        )
+    }
+}
