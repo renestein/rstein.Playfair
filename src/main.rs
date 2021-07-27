@@ -1,20 +1,21 @@
+mod globalconstants;
+mod operationtype;
+mod playfairconfiguration;
+
+use globalconstants::*;
+use operationtype::*;
+use playfairconfiguration::PlayfairConfiguration;
 use std::collections;
 use std::io;
-
-const KEY_ROWS: usize = 5;
-const KEY_COLUMNS: usize = 5;
-const CHAR_SURROGATE: char = 'Z';
-const UNUSED_CHAR: char = 'J';
-const REPLACE_CHAR_FOR_UUSED_CHAR: char = 'I';
 
 fn main() {
     let mut ascii_table = get_ascii_table();
     print_char_table(&ascii_table);
+    let mut config = PlayfairConfiguration::new();
 
-    ascii_table.retain(|c| *c != UNUSED_CHAR);
+    println!("{}", config);
+    ascii_table.retain(|c| *c != config.unused_char);
     print_char_table(&ascii_table);
-
-    let is_encrypt: bool;
 
     loop {
         let mut choice = String::new();
@@ -25,9 +26,10 @@ fn main() {
             println!("Invalid choice. Try again.");
             continue;
         }
-        is_encrypt = match choice.chars().enumerate().next() {
-            Some((_, '1')) => true,
-            Some((_, '2')) => false,
+
+        config.operation_type = match choice.chars().enumerate().next() {
+            Some((_, '1')) => OperationType::Encrypt,
+            Some((_, '2')) => OperationType::Decrypt,
             Some((_, ichar)) => {
                 println!("Invalid choice {0}. Ty again.", ichar);
                 continue;
@@ -41,12 +43,11 @@ fn main() {
         break;
     }
 
-    let mut key = String::new();
     println!("Input your key (max 25 chars will be used) and press <Enter>:");
     loop {
-        let read_key_result = io::stdin().read_line(&mut key);
+        let read_key_result = io::stdin().read_line(&mut config.key);
         match read_key_result {
-            Ok(_) => key = key.trim_end().to_uppercase(),
+            Ok(_) => config.key = config.key.trim_end().to_uppercase(),
             Err(error) => {
                 println!("An error occured while reading key: {}", error);
                 continue;
@@ -61,7 +62,7 @@ fn main() {
     let mut current_key_table_index_1 = 0;
     let mut used_chars: collections::HashSet<char> = collections::HashSet::new();
 
-    for key_char in key.chars() {
+    for key_char in config.key.chars() {
         if used_chars.contains(&key_char) {
             continue;
         }
@@ -104,7 +105,7 @@ fn main() {
 
     let mut raw_input_text = String::new();
     let input_text: String;
-    if is_encrypt {
+    if config.is_encrypt() {
         println!("Input your plain text and press <Enter>:");
     } else {
         println!("Input your cipher text and press <Enter>:");
@@ -112,23 +113,30 @@ fn main() {
 
     let read_result = io::stdin().read_line(&mut raw_input_text);
     match read_result {
-        Ok(_) => {raw_input_text = raw_input_text.to_uppercase(); input_text = prepare_input_text(&raw_input_text, &ascii_table, is_encrypt)},
+        Ok(_) => {
+            raw_input_text = raw_input_text.to_uppercase();
+            input_text = prepare_input_text(&raw_input_text, &ascii_table, &config)
+        }
 
         Err(error) => panic!("Unexpected error while reading input data {}.", error),
     }
 
-    let output_text = encrypt_decrypt(&input_text, &key_table, is_encrypt);
+    let output_text = encrypt_decrypt(&input_text, &key_table, &config);
     println!("Output text:");
     println!("");
     println!("{}", output_text);
 }
 
-fn encrypt_decrypt(input_text: &str, keytable: &[Vec<char>], is_encrypt: bool) -> String {
+fn encrypt_decrypt(
+    input_text: &str,
+    keytable: &[Vec<char>],
+    config: &PlayfairConfiguration,
+) -> String {
     let mut output_text = String::with_capacity(input_text.len());
-    let mut first_char = UNUSED_CHAR;
+    let mut first_char = config.unused_char;
 
     for input_char in input_text.chars() {
-        if first_char == UNUSED_CHAR {
+        if first_char == config.unused_char {
             first_char = input_char;
             continue;
         }
@@ -151,10 +159,10 @@ fn encrypt_decrypt(input_text: &str, keytable: &[Vec<char>], is_encrypt: bool) -
             .unwrap();
 
         let add_to_same_row_or_column = {
-            if is_encrypt {
-                1
-            } else {
+            if config.is_decrypt() {
                 KEY_ROWS - 1
+            } else {
+                1
             }
         };
 
@@ -188,46 +196,53 @@ fn encrypt_decrypt(input_text: &str, keytable: &[Vec<char>], is_encrypt: bool) -
             }
         }
 
-        first_char = UNUSED_CHAR;
+        first_char = config.unused_char;
     }
 
     return output_text;
 }
 
-fn prepare_input_text(raw_input_text: &str, ascii_table: &[char], is_encrypt: bool) -> String {
+fn prepare_input_text(
+    raw_input_text: &str,
+    ascii_table: &[char],
+    config: &PlayfairConfiguration,
+) -> String {
     let mut output_text = String::with_capacity(raw_input_text.len() + 1);
-    let mut first_char = UNUSED_CHAR;
-
+    let mut first_char = config.unused_char;
     for elem in raw_input_text.chars() {
-        if !ascii_table.contains(&elem) && elem != UNUSED_CHAR {
+        if !ascii_table.contains(&elem) && elem != config.unused_char {
             continue;
         }
 
-        if !is_encrypt {
+        if config.is_decrypt() {
             output_text.push(elem);
             continue;
         }
 
-        let plain_text_char = match elem {
-            UNUSED_CHAR => REPLACE_CHAR_FOR_UUSED_CHAR,
-            _ => elem,
+        let plain_text_char = {
+            if elem == config.unused_char {
+                config.replace_char_for_unused_char
+            } else {
+                elem
+            }
         };
-        if first_char != UNUSED_CHAR {
+
+        if first_char != config.unused_char {
             output_text.push(first_char);
             if first_char == plain_text_char {
-                output_text.push(CHAR_SURROGATE);
+                output_text.push(config.surrogate_char);
             }
             output_text.push(plain_text_char);
-            first_char = UNUSED_CHAR;
+            first_char = config.unused_char;
         } else {
             first_char = plain_text_char;
         }
     }
 
-    if is_encrypt {
-        if first_char != UNUSED_CHAR {
+    if config.is_encrypt() {
+        if first_char != config.unused_char {
             output_text.push(first_char);
-            output_text.push(CHAR_SURROGATE);
+            output_text.push(config.surrogate_char);
         }
     }
 
